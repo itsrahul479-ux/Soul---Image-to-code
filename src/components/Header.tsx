@@ -64,7 +64,10 @@ export const Header: React.FC<HeaderProps> = ({
                 <span className="bg-gradient-to-r from-sky-400 via-teal-300 to-emerald-400 bg-clip-text text-transparent">Soul</span>
                 <span className="text-slate-500 font-normal text-xs">&bull; Screen &rarr; HTML</span>
               </h1>
-
+              <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                AI Vision
+              </span>
             </div>
             <p className="text-xs text-slate-400 font-medium truncate max-w-[200px] md:max-w-xs">
               {project ? project.name : 'Awaiting Screenshot Upload'}

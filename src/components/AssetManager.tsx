@@ -75,25 +75,25 @@ export const AssetManager: React.FC<AssetManagerProps> = ({ currentScreen, onUpd
       <div className="flex items-center bg-[#0d131d] p-1 rounded-xl border border-[#1f2c3e]">
         <button
           onClick={() => setActiveSubTab('icons')}
-          className={`flex-1 flex flex-col items-center justify-center gap-1.5 py-2 rounded-lg text-[11px] font-semibold transition-all ${
+          className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
             activeSubTab === 'icons'
               ? 'bg-[#1a2638] text-sky-400 shadow-sm'
               : 'text-slate-400 hover:text-slate-200'
           }`}
         >
-          <Sparkles className="w-4 h-4" />
-          <span className="text-center leading-tight">Icons & Vectors <br className="hidden 2xl:block" />({iconsList.length})</span>
+          <Sparkles className="w-3.5 h-3.5" />
+          <span>Icons & Vectors ({iconsList.length})</span>
         </button>
         <button
           onClick={() => setActiveSubTab('images')}
-          className={`flex-1 flex flex-col items-center justify-center gap-1.5 py-2 rounded-lg text-[11px] font-semibold transition-all ${
+          className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
             activeSubTab === 'images'
               ? 'bg-[#1a2638] text-emerald-400 shadow-sm'
               : 'text-slate-400 hover:text-slate-200'
           }`}
         >
-          <ImageIcon className="w-4 h-4" />
-          <span className="text-center leading-tight">Images & Media <br className="hidden 2xl:block" />({(currentScreen.assets || []).length})</span>
+          <ImageIcon className="w-3.5 h-3.5" />
+          <span>Images & Media ({(currentScreen.assets || []).length})</span>
         </button>
       </div>
 
