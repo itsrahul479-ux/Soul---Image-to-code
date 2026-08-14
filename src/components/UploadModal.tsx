@@ -1,4 +1,6 @@
 import React, { useState, useRef } from 'react';
+import ReactCrop, { type Crop, type PixelCrop } from 'react-image-crop';
+import 'react-image-crop/dist/ReactCrop.css';
 import { 
   Upload, 
   X, 
@@ -33,7 +35,41 @@ export const UploadModal: React.FC<UploadModalProps> = ({
   const [dragOver, setDragOver] = useState<boolean>(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [analysisStage, setAnalysisStage] = useState<string>('Analyzing visual structure...');
+  const [crop, setCrop] = useState<Crop>();
+  const [completedCrop, setCompletedCrop] = useState<PixelCrop | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const imgRef = useRef<HTMLImageElement>(null);
+
+  const getCroppedImg = (image: HTMLImageElement, crop: PixelCrop): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const canvas = document.createElement('canvas');
+      const scaleX = image.naturalWidth / image.width;
+      const scaleY = image.naturalHeight / image.height;
+      
+      canvas.width = crop.width * scaleX;
+      canvas.height = crop.height * scaleY;
+      
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        reject(new Error('No 2d context'));
+        return;
+      }
+      
+      ctx.drawImage(
+        image,
+        crop.x * scaleX,
+        crop.y * scaleY,
+        crop.width * scaleX,
+        crop.height * scaleY,
+        0,
+        0,
+        crop.width * scaleX,
+        crop.height * scaleY
+      );
+      
+      resolve(canvas.toDataURL('image/jpeg', 0.95));
+    });
+  };
 
   if (!isOpen) return null;
 
@@ -62,6 +98,15 @@ export const UploadModal: React.FC<UploadModalProps> = ({
   const handleStartAnalysis = async () => {
     if (!previewImage) return;
 
+    let finalImage = previewImage;
+    if (completedCrop && completedCrop.width > 0 && completedCrop.height > 0 && imgRef.current) {
+      try {
+        finalImage = await getCroppedImg(imgRef.current, completedCrop);
+      } catch (e) {
+        console.error('Failed to crop image', e);
+      }
+    }
+
     // Multi-stage progress indication
     setAnalysisStage('Detecting device frames & screen boundaries...');
     const t1 = setTimeout(() => {
@@ -75,9 +120,11 @@ export const UploadModal: React.FC<UploadModalProps> = ({
     }, 2400);
 
     try {
-      await onAnalyzeScreenshot(previewImage);
+      await onAnalyzeScreenshot(finalImage);
       onClose();
       setPreviewImage(null);
+      setCrop(undefined);
+      setCompletedCrop(null);
     } finally {
       clearTimeout(t1);
       clearTimeout(t2);
@@ -164,16 +211,36 @@ export const UploadModal: React.FC<UploadModalProps> = ({
             </div>
           ) : (
             <div className="space-y-4">
-              <div className="relative rounded-2xl overflow-hidden border border-slate-700 max-h-[300px] flex items-center justify-center bg-black/40">
-                <img
-                  src={previewImage}
-                  alt="Upload Preview"
-                  className="max-h-[300px] object-contain rounded-xl"
-                />
+              <div className="relative rounded-2xl overflow-hidden border border-slate-700 max-h-[400px] flex items-center justify-center bg-black/40">
+                {!isAnalyzing ? (
+                  <ReactCrop
+                    crop={crop}
+                    onChange={(c) => setCrop(c)}
+                    onComplete={(c) => setCompletedCrop(c)}
+                    className="max-h-[400px] flex items-center justify-center"
+                  >
+                    <img
+                      ref={imgRef}
+                      src={previewImage}
+                      alt="Upload Preview"
+                      className="max-h-[400px] object-contain"
+                    />
+                  </ReactCrop>
+                ) : (
+                  <img
+                    src={previewImage}
+                    alt="Upload Preview"
+                    className="max-h-[400px] object-contain rounded-xl"
+                  />
+                )}
                 {!isAnalyzing && (
                   <button
-                    onClick={() => setPreviewImage(null)}
-                    className="absolute top-3 right-3 bg-black/70 hover:bg-black text-white p-1.5 rounded-full backdrop-blur-md"
+                    onClick={() => {
+                      setPreviewImage(null);
+                      setCrop(undefined);
+                      setCompletedCrop(null);
+                    }}
+                    className="absolute top-3 right-3 bg-black/70 hover:bg-black text-white p-1.5 rounded-full backdrop-blur-md z-10"
                   >
                     <X className="w-4 h-4" />
                   </button>
