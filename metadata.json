@@ -1,0 +1,6 @@
+{
+  "name": "Soul",
+  "description": "AI-powered UI reverse-engineering, design system extraction, asset discovery, live preview and visual refinement platform.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
