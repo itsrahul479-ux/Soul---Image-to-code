@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { SAMPLE_PROJECTS, REELS_SIENNA_PROJECT } from './data/samples';
-import { ProjectSpec, ScreenSpec } from './types';
+import { ProjectSpec, ScreenSpec, UserProfileSettings } from './types';
 import { Header } from './components/Header';
 import { Sidebar } from './components/Sidebar';
 import { LivePreview } from './components/LivePreview';
@@ -10,8 +10,20 @@ import { AIRefinementDrawer } from './components/AIRefinementDrawer';
 import { UploadModal } from './components/UploadModal';
 import { ExportModal } from './components/ExportModal';
 import { EmptyProjectView } from './components/EmptyProjectView';
+import { ProfileSettingsModal } from './components/ProfileSettingsModal';
+import { loadUserProfileSettings, saveUserProfileSettings } from './data/userAssets';
 
 export default function App() {
+  // User Profile & Custom Asset Vault Settings State
+  const [userSettings, setUserSettings] = useState<UserProfileSettings>(() => loadUserProfileSettings());
+  const [isProfileOpen, setIsProfileOpen] = useState<boolean>(false);
+
+  const handleUpdateSettings = (newSettings: UserProfileSettings) => {
+    setUserSettings(newSettings);
+    saveUserProfileSettings(newSettings);
+    setToastMessage({ text: 'Profile & Asset Vault settings updated.', type: 'success' });
+  };
+
   // Initialize projects with high-fidelity Reels Sienna specification as default
   const [projects, setProjects] = useState<ProjectSpec[]>(() => {
     try {
@@ -40,6 +52,35 @@ export default function App() {
 
   const [activeTab, setActiveTab] = useState<'preview' | 'compare' | 'code'>('preview');
   const [activePanel, setActivePanel] = useState<'design' | 'components' | 'assets' | 'history' | 'projects'>('projects');
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('soul_ui_sidebar_collapsed') === 'true';
+    } catch {
+      return false;
+    }
+  });
+
+  const toggleSidebar = () => {
+    setIsSidebarCollapsed((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem('soul_ui_sidebar_collapsed', String(next));
+      } catch {}
+      return next;
+    });
+  };
+
+  // Keyboard shortcut Ctrl+B or Cmd+B to toggle sidebar
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'b') {
+        e.preventDefault();
+        toggleSidebar();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   // Modals & Drawers state
   const [isUploadOpen, setIsUploadOpen] = useState<boolean>(false);
@@ -143,14 +184,19 @@ export default function App() {
     );
   };
 
-  // Multimodal screenshot analysis
+  // Multimodal screenshot analysis with User Custom Asset Vault prioritization
   const handleAnalyzeScreenshot = async (imageBase64: string) => {
     try {
       setIsAnalyzing(true);
       const res = await fetch('/api/analyze-screenshot', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ imageBase64, mimeType: 'image/png' }),
+        body: JSON.stringify({ 
+          imageBase64, 
+          mimeType: 'image/png',
+          userAssets: userSettings.customAssets || [],
+          assetMatchPriority: userSettings.assetMatchPriority || 'user-first'
+        }),
       });
 
       const data = await res.json();
@@ -159,7 +205,20 @@ export default function App() {
         setCurrentProjectId(data.project.id);
         setCurrentScreenId(data.project.selectedScreenId || data.project.screens[0]?.id || '');
         
-        if (data.notice) {
+        if (data.assetResolutionReport) {
+          const { userVaultMatched, webDownloaded } = data.assetResolutionReport;
+          if (userVaultMatched > 0) {
+            setToastMessage({ 
+              text: `✨ UI Generated: ${userVaultMatched} icon(s) matched from your Custom Vault, ${webDownloaded} downloaded from Web!`, 
+              type: 'success' 
+            });
+          } else {
+            setToastMessage({ 
+              text: `UI Generated: ${webDownloaded} icon(s) downloaded from Web repository.`, 
+              type: 'success' 
+            });
+          }
+        } else if (data.notice) {
           setToastMessage({ text: data.notice, type: 'info' });
         } else {
           setToastMessage({ text: 'Screenshot successfully analyzed & reconstructed into clean HTML/CSS!', type: 'success' });
@@ -289,8 +348,12 @@ export default function App() {
         onOpenUpload={() => setIsUploadOpen(true)}
         onOpenRefine={() => setIsRefineOpen(true)}
         onOpenExport={() => setIsExportOpen(true)}
+        onOpenProfile={() => setIsProfileOpen(true)}
+        userSettings={userSettings}
         activeTab={activeTab}
         setActiveTab={setActiveTab}
+        isSidebarCollapsed={isSidebarCollapsed}
+        onToggleSidebar={toggleSidebar}
       />
 
       {/* Main Workspace Layout */}
@@ -308,6 +371,8 @@ export default function App() {
           onOpenUpload={() => setIsUploadOpen(true)}
           onUpdateCode={handleUpdateCode}
           onQuickRefine={handleSubmitRefine}
+          isCollapsed={isSidebarCollapsed}
+          onToggleCollapse={toggleSidebar}
         />
 
         {/* Center Main Stage */}
@@ -349,6 +414,14 @@ export default function App() {
           )}
         </main>
       </div>
+
+      {/* Profile & Custom Asset Vault Modal */}
+      <ProfileSettingsModal
+        isOpen={isProfileOpen}
+        onClose={() => setIsProfileOpen(false)}
+        settings={userSettings}
+        onUpdateSettings={handleUpdateSettings}
+      />
 
       {/* AI Refinement Drawer */}
       {currentProject && currentScreen && (

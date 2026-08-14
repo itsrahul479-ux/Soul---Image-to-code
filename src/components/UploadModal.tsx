@@ -150,12 +150,15 @@ export const UploadModal: React.FC<UploadModalProps> = ({
                 Supports single or multi-screen screenshots. Supports PNG, JPG, WEBP up to 20MB. You can also paste (<kbd className="bg-slate-800 px-1.5 py-0.5 rounded text-slate-300 font-mono text-[10px]">Ctrl+V</kbd>).
               </p>
 
-              <div className="flex items-center gap-3 text-[11px] text-slate-500">
+              <div className="flex flex-wrap items-center justify-center gap-2.5 text-[11px] text-slate-500">
                 <span className="flex items-center gap-1">
                   <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /> Multi-screen detection
                 </span>
                 <span className="flex items-center gap-1">
                   <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /> Glassmorphism extraction
+                </span>
+                <span className="flex items-center gap-1 text-sky-400 bg-sky-950/40 border border-sky-800/40 px-2 py-0.5 rounded-full">
+                  <Sparkles className="w-3 h-3 text-sky-400" /> User Asset Vault matching active
                 </span>
               </div>
             </div>

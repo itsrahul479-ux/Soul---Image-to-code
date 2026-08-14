@@ -10,9 +10,12 @@ import {
   RefreshCw,
   Code,
   SlidersHorizontal,
-  ChevronRight
+  ChevronRight,
+  User,
+  Settings,
+  Database
 } from 'lucide-react';
-import { ProjectSpec, ScreenSpec } from '../types';
+import { ProjectSpec, ScreenSpec, UserProfileSettings } from '../types';
 
 interface HeaderProps {
   project?: ProjectSpec | null;
@@ -21,8 +24,12 @@ interface HeaderProps {
   onOpenUpload: () => void;
   onOpenRefine: () => void;
   onOpenExport: () => void;
+  onOpenProfile: () => void;
+  userSettings?: UserProfileSettings;
   activeTab: string;
   setActiveTab: (tab: 'preview' | 'compare' | 'code') => void;
+  isSidebarCollapsed?: boolean;
+  onToggleSidebar?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -32,15 +39,19 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenUpload,
   onOpenRefine,
   onOpenExport,
+  onOpenProfile,
+  userSettings,
   activeTab,
   setActiveTab,
+  isSidebarCollapsed,
+  onToggleSidebar,
 }) => {
   const hasActiveProject = Boolean(project && currentScreen);
 
   return (
     <header className="h-16 bg-[#0f141c] border-b border-[#222f3e] px-4 md:px-6 flex items-center justify-between z-30 shrink-0 select-none">
       {/* Brand & Project Info */}
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-3 md:gap-4">
         <div className="flex items-center gap-2.5">
           <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-sky-500 via-indigo-500 to-emerald-400 p-[1px] flex items-center justify-center shadow-lg shadow-sky-500/20">
             <div className="w-full h-full bg-[#0d121a] rounded-[11px] flex items-center justify-center">
@@ -145,6 +156,44 @@ export const Header: React.FC<HeaderProps> = ({
 
       {/* Right Controls */}
       <div className="flex items-center gap-2">
+        {/* Profile & Custom Asset Vault Icon Button (Exact Red Box Location) */}
+        <button
+          id="header-profile-settings-btn"
+          onClick={onOpenProfile}
+          className="flex items-center gap-2 p-1.5 sm:px-2.5 sm:py-1.5 bg-[#141d2a] hover:bg-[#1c293c] border border-[#233246] hover:border-sky-500/50 rounded-xl transition-all shadow-sm group relative"
+          title="My Profile & Custom Asset Vault Settings"
+          aria-label="Profile and Asset Settings"
+        >
+          <div className="relative">
+            {userSettings?.avatarUrl ? (
+              <img
+                src={userSettings.avatarUrl}
+                alt="Profile"
+                className="w-6 h-6 rounded-lg object-cover border border-sky-500/40"
+              />
+            ) : (
+              <div className="w-6 h-6 rounded-lg bg-sky-500/15 border border-sky-500/30 flex items-center justify-center text-sky-400">
+                <User className="w-3.5 h-3.5" />
+              </div>
+            )}
+            <span className="absolute -bottom-0.5 -right-0.5 w-2 h-2 bg-emerald-400 border border-[#141d2a] rounded-full"></span>
+          </div>
+
+          <div className="hidden lg:flex flex-col text-left leading-none">
+            <span className="text-[11px] font-bold text-slate-200 group-hover:text-sky-300 transition-colors">
+              {userSettings?.name ? userSettings.name.split(' ')[0] : 'Profile'}
+            </span>
+            <span className="text-[9.5px] text-slate-400 flex items-center gap-0.5 mt-0.5">
+              <Database className="w-2.5 h-2.5 text-sky-400" />
+              {userSettings?.customAssets?.length || 0} Assets
+            </span>
+          </div>
+
+          <div className="hidden sm:flex items-center justify-center w-5 h-5 rounded-md bg-[#101722] text-slate-400 group-hover:text-slate-200">
+            <Settings className="w-3 h-3 group-hover:rotate-45 transition-transform duration-300" />
+          </div>
+        </button>
+
         <button
           id="header-upload-btn"
           onClick={onOpenUpload}

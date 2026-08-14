@@ -73,15 +73,39 @@ export interface UIComponentSpec {
 export interface DetectedIcon {
   id: string;
   name: string;
-  matchedLibrary: 'Lucide' | 'Iconly' | 'Material' | 'SVG Custom';
+  matchedLibrary: 'Lucide' | 'Iconly' | 'Material' | 'SVG Custom' | 'User Vault' | 'Web Sourced';
   iconKey: string;
   confidence: number;
   category: string;
   svgPreview?: string;
   status: 'matched' | 'unmatched';
-  matchType?: 'exact' | 'closest' | 'downloaded';
+  matchType?: 'exact' | 'closest' | 'downloaded' | 'user-asset';
   svgMarkup?: string;
   downloaded?: boolean;
+  sourceOrigin?: 'user-vault' | 'web-internet' | 'system-catalog';
+}
+
+export interface UserCustomAsset {
+  id: string;
+  name: string;
+  type: 'icon' | 'image' | 'logo' | 'illustration';
+  format: 'svg' | 'png' | 'jpg' | 'webp';
+  content: string; // SVG code or image URL / base64
+  thumbnail?: string;
+  tags: string[];
+  category?: string;
+  dimensions?: { width: number; height: number };
+  createdAt: string;
+}
+
+export interface UserProfileSettings {
+  name: string;
+  email: string;
+  avatarUrl: string;
+  customAssets: UserCustomAsset[];
+  assetMatchPriority: 'user-first' | 'web-first';
+  autoDownloadMissingIcons: boolean;
+  preferredIconLibrary: 'lucide' | 'feather' | 'heroicons' | 'remix';
 }
 
 export interface DetectedAsset {

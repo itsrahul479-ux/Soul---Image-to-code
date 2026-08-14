@@ -98,18 +98,29 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
     if (!containerRef.current) return;
     const { clientWidth, clientHeight } = containerRef.current;
     
-    // Available padded space
-    const availW = Math.max(280, clientWidth - 56);
-    const availH = Math.max(300, clientHeight - 56);
+    // Total physical device dimensions including bezel padding
+    const isMobile = currentPreset.category === 'mobile';
+    const isTablet = currentPreset.category === 'tablet';
+    const isDesktop = currentPreset.category === 'desktop';
 
-    const targetW = typeof currentPreset.width === 'number' ? currentPreset.width : clientWidth - 80;
-    const targetH = typeof currentPreset.height === 'number' ? currentPreset.height : clientHeight - 80;
+    const bezelW = isMobile ? 24 : isTablet ? 28 : 0;
+    const bezelH = isMobile ? 24 : isTablet ? 28 : (isDesktop ? 40 : 0);
 
-    const scaleW = availW / targetW;
-    const scaleH = availH / targetH;
-    const fit = Math.min(scaleW, scaleH, 1.0); // Cap at 100% max fit unless small
+    const baseW = typeof currentPreset.width === 'number' ? currentPreset.width : clientWidth - 64;
+    const baseH = typeof currentPreset.height === 'number' ? currentPreset.height : clientHeight - 64;
 
-    setCalculatedFitScale(Math.max(0.35, fit));
+    const totalW = baseW + bezelW;
+    const totalH = baseH + bezelH;
+
+    // Available padded space in canvas stage
+    const availW = Math.max(260, clientWidth - 48);
+    const availH = Math.max(260, clientHeight - 48);
+
+    const scaleW = availW / totalW;
+    const scaleH = availH / totalH;
+    const fit = Math.min(scaleW, scaleH);
+
+    setCalculatedFitScale(Math.max(0.25, fit));
   }, [currentPreset]);
 
   useEffect(() => {
@@ -127,6 +138,20 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
   }, [updateFitScale]);
 
   const effectiveScale = zoomMode === 'fit' ? calculatedFitScale : zoomPercent / 100;
+
+  // Physical outer bounds of current device frame
+  const isMobileView = currentPreset.category === 'mobile';
+  const isTabletView = currentPreset.category === 'tablet';
+  const isDesktopView = currentPreset.category === 'desktop';
+
+  const screenWidth = typeof currentPreset.width === 'number' ? currentPreset.width : 1000;
+  const screenHeight = typeof currentPreset.height === 'number' ? currentPreset.height : 700;
+
+  const bezelWidth = isMobileView ? 24 : isTabletView ? 28 : 0;
+  const bezelHeight = isMobileView ? 24 : isTabletView ? 28 : (isDesktopView ? 40 : 0);
+
+  const deviceTotalWidth = typeof currentPreset.width === 'number' ? screenWidth + bezelWidth : '100%';
+  const deviceTotalHeight = typeof currentPreset.height === 'number' ? screenHeight + bezelHeight : '100%';
 
   // Combine HTML + CSS + JS into complete standalone HTML doc for sandboxed iframe
   const bundleSrcDoc = () => {
@@ -239,10 +264,6 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
     setSelectedPresetId(presetId);
     setShowPresetDropdown(false);
   };
-
-  const isMobileView = currentPreset.category === 'mobile';
-  const isTabletView = currentPreset.category === 'tablet';
-  const isDesktopView = currentPreset.category === 'desktop';
 
   return (
     <div className="flex-1 flex flex-col h-full bg-[#080c14] overflow-hidden select-none">
@@ -450,7 +471,7 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
       <div
         ref={containerRef}
         onClick={() => setShowPresetDropdown(false)}
-        className="flex-1 overflow-hidden p-3 md:p-6 flex items-center justify-center relative bg-[#06090e] bg-[radial-gradient(#1a2638_1px,transparent_1px)] [background-size:24px_24px]"
+        className="flex-1 overflow-auto p-4 md:p-8 flex items-center justify-center relative bg-[#06090e] bg-[radial-gradient(#1a2638_1px,transparent_1px)] [background-size:24px_24px]"
       >
         {/* Floating Screen Info Badge */}
         <div className="absolute top-4 left-6 z-10 flex items-center gap-2 bg-[#0e1622]/90 backdrop-blur-md border border-[#1f2d40] px-3.5 py-1.5 rounded-full text-xs text-slate-300 shadow-xl pointer-events-none">
@@ -483,66 +504,103 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
           <span>Refine Screen with AI</span>
         </button>
 
-        {/* Device Chassis & Sandboxed Iframe Container */}
+        {/* Scaled Layout Placeholder Box: occupies the exact visual scaled width & height in the parent flexbox */}
         <div
           style={{
-            transform: `scale(${effectiveScale})`,
-            transformOrigin: 'center center',
-            transition: 'transform 0.18s cubic-bezier(0.2, 0.8, 0.2, 1)',
-            width: typeof currentPreset.width === 'number' ? `${currentPreset.width}px` : currentPreset.width,
-            height: typeof currentPreset.height === 'number' ? `${currentPreset.height}px` : currentPreset.height,
-            maxWidth: '100%',
-            maxHeight: '100%',
+            width: typeof deviceTotalWidth === 'number' ? `${deviceTotalWidth * effectiveScale}px` : '100%',
+            height: typeof deviceTotalHeight === 'number' ? `${deviceTotalHeight * effectiveScale}px` : '100%',
           }}
-          className="relative shrink-0 flex flex-col transition-all duration-300"
+          className="relative flex items-center justify-center shrink-0 transition-all duration-200"
         >
-          {/* Desktop Window Titlebar (When viewing desktop screens or desktop preset) */}
-          {isDesktopView && (
-            <div className="h-9 bg-[#17202e] border border-[#2b3a4f] border-b-0 rounded-t-2xl px-4 flex items-center justify-between shrink-0 shadow-lg select-none">
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full bg-[#ff5f56] border border-[#e0443e]"></div>
-                <div className="w-3 h-3 rounded-full bg-[#ffbd2e] border border-[#dea123]"></div>
-                <div className="w-3 h-3 rounded-full bg-[#27c93f] border border-[#1aab29]"></div>
-              </div>
-              <div className="bg-[#0f1622] border border-[#243346] px-6 py-1 rounded-md text-[11px] font-mono text-slate-400 flex items-center gap-2">
-                <span className="text-emerald-400">🔒</span>
-                <span>https://preview.local/app</span>
-              </div>
-              <div className="w-12"></div>
-            </div>
-          )}
-
-          {/* Hardware Device Outer Frame */}
+          {/* Hardware Device Chassis Frame */}
           <div
             style={{
-              borderRadius: isDesktopView ? '0 0 16px 16px' : `${currentPreset.radius}px`,
+              width: typeof deviceTotalWidth === 'number' ? `${deviceTotalWidth}px` : '100%',
+              height: typeof deviceTotalHeight === 'number' ? `${deviceTotalHeight}px` : '100%',
+              transform: `scale(${effectiveScale})`,
+              transformOrigin: 'center center',
             }}
-            className={`w-full h-full relative overflow-hidden bg-transparent shadow-[0_30px_90px_rgba(0,0,0,0.85)] border ${
-              isDesktopView
-                ? 'border-[#2b3a4f] border-t-0'
-                : 'border-[#24354b] ring-1 ring-white/10 ring-inset'
-            }`}
+            className="relative shrink-0 flex flex-col items-center justify-center select-none transition-transform duration-200"
           >
-            {/* Dynamic Island Notch (Only for notched mobile devices) */}
-            {currentPreset.hasNotch && (
-              <div className="absolute top-2.5 left-1/2 -translate-x-1/2 w-28 h-7 bg-black rounded-full z-30 pointer-events-none flex items-center justify-between px-3 shadow-md">
-                <div className="w-2.5 h-2.5 rounded-full bg-[#111] ring-1 ring-slate-800"></div>
-                <div className="w-2.5 h-2.5 rounded-full bg-[#0a192f] ring-1 ring-sky-900/60"></div>
+            {/* ==================== MOBILE SMARTPHONE FRAME ==================== */}
+            {isMobileView && (
+              <div className="w-full h-full relative p-[12px] bg-[#111827] rounded-[52px] shadow-[0_30px_90px_rgba(0,0,0,0.9),0_0_0_1px_rgba(255,255,255,0.16),inset_0_1px_2px_rgba(255,255,255,0.25)] border border-[#223145] flex flex-col">
+                {/* Physical Hardware Buttons on outer rim */}
+                {/* Action button */}
+                <div className="w-1 h-8 bg-[#2d3d52] rounded-l-md absolute -left-[4px] top-24 border-r border-[#1a2533]"></div>
+                {/* Volume Up */}
+                <div className="w-1 h-12 bg-[#2d3d52] rounded-l-md absolute -left-[4px] top-36 border-r border-[#1a2533]"></div>
+                {/* Volume Down */}
+                <div className="w-1 h-12 bg-[#2d3d52] rounded-l-md absolute -left-[4px] top-52 border-r border-[#1a2533]"></div>
+                {/* Power / Side Button */}
+                <div className="w-1 h-16 bg-[#2d3d52] rounded-r-md absolute -right-[4px] top-40 border-l border-[#1a2533]"></div>
+
+                {/* Inner Bezel Screen Display */}
+                <div className="w-full h-full rounded-[40px] overflow-hidden relative bg-black shadow-inner">
+                  {/* Bottom Home Indicator Bar */}
+                  <div className="w-32 h-1 bg-white/40 rounded-full absolute bottom-2 left-1/2 -translate-x-1/2 z-40 pointer-events-none shadow-sm"></div>
+
+                  {/* Sandboxed Iframe */}
+                  <iframe
+                    key={key}
+                    ref={iframeRef}
+                    srcDoc={bundleSrcDoc()}
+                    title={screen.title}
+                    className="w-full h-full border-0 bg-black block"
+                    sandbox="allow-scripts allow-modals allow-same-origin"
+                  />
+                </div>
               </div>
             )}
 
-            {/* Inner Live Iframe */}
-            <iframe
-              key={key}
-              ref={iframeRef}
-              srcDoc={bundleSrcDoc()}
-              title={screen.title}
-              className="w-full h-full border-0 bg-transparent block"
-              style={{
-                borderRadius: isDesktopView ? '0 0 16px 16px' : `${currentPreset.radius - 2}px`,
-              }}
-              sandbox="allow-scripts allow-modals allow-same-origin"
-            />
+            {/* ==================== TABLET FRAME ==================== */}
+            {isTabletView && (
+              <div className="w-full h-full relative p-[14px] bg-[#111827] rounded-[38px] shadow-[0_30px_90px_rgba(0,0,0,0.9),0_0_0_1px_rgba(255,255,255,0.15)] border border-[#223145] flex flex-col">
+                {/* Inner Screen Display */}
+                <div className="w-full h-full rounded-[24px] overflow-hidden relative bg-black shadow-inner">
+                  {/* Sandboxed Iframe */}
+                  <iframe
+                    key={key}
+                    ref={iframeRef}
+                    srcDoc={bundleSrcDoc()}
+                    title={screen.title}
+                    className="w-full h-full border-0 bg-black block"
+                    sandbox="allow-scripts allow-modals allow-same-origin"
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* ==================== DESKTOP / RESPONSIVE FRAME ==================== */}
+            {isDesktopView && (
+              <div className="w-full h-full relative flex flex-col rounded-2xl overflow-hidden shadow-[0_30px_90px_rgba(0,0,0,0.9)] border border-[#25364e]">
+                {/* Desktop Window Titlebar */}
+                <div className="h-10 bg-[#16202e] border-b border-[#25364d] px-4 flex items-center justify-between shrink-0 select-none">
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full bg-[#ff5f56] border border-[#e0443e]"></div>
+                    <div className="w-3 h-3 rounded-full bg-[#ffbd2e] border border-[#dea123]"></div>
+                    <div className="w-3 h-3 rounded-full bg-[#27c93f] border border-[#1aab29]"></div>
+                  </div>
+                  <div className="bg-[#0f1622] border border-[#243346] px-8 py-1 rounded-lg text-[11px] font-mono text-slate-400 flex items-center gap-2">
+                    <span className="text-emerald-400">🔒</span>
+                    <span>https://preview.local/app</span>
+                  </div>
+                  <div className="w-12"></div>
+                </div>
+
+                {/* Inner Screen Display */}
+                <div className="w-full flex-1 overflow-hidden relative bg-black">
+                  <iframe
+                    key={key}
+                    ref={iframeRef}
+                    srcDoc={bundleSrcDoc()}
+                    title={screen.title}
+                    className="w-full h-full border-0 bg-black block"
+                    sandbox="allow-scripts allow-modals allow-same-origin"
+                  />
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
